@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "app",
+    "plugins/core",
+    "plugins/dns_query"
+]

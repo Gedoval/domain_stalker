@@ -1,0 +1,17 @@
+[env]
+BUILD_TYPE="debug"
+
+[tasks.package_app]
+description = "Package domain stalker application"
+script = '''
+    set -e
+
+    mkdir -p -v domain_stalker/plugins
+    cp -v ./target/${BUILD_TYPE}/domain_stalker ./domain_stalker
+    cp -v ./target/${BUILD_TYPE}/*.so ./domain_stalker/plugins
+'''
+dependencies = [
+    "check",
+    "build",
+    "test"
+]
