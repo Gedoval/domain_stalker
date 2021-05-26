@@ -1,8 +1,10 @@
 use plugins_core::{InvocationError, Plugin};
 
-use cli_table::{Cell, Style, Table, format::Justify, print_stdout};
+use cli_table::{format::Justify, print_stdout, Cell, Style, Table};
 
 use crate::ExternalPlugins;
+
+const HEADERS: [&str; 2] = ["Descriptor", "Descriptor value"];
 
 pub fn show_plugin_help(
     plugin_name: &str,
@@ -25,13 +27,11 @@ pub fn show_plugin_help(
             .collect::<Vec<_>>(),
     );
 
-    let table = body.table()
-        .title(
-            vec![
-                "Descriptor".cell().justify(Justify::Center).bold(true),
-                "Descriptor value".cell().justify(Justify::Center).bold(true),
-            ],
-        );
+    let table = body.table().title(
+        HEADERS
+            .iter()
+            .map(|header| header.cell().bold(true).justify(Justify::Center)),
+    );
 
     print_stdout(table).unwrap();
 
