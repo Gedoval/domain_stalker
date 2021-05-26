@@ -1,0 +1,15 @@
+[package]
+name = "dns_query"
+version = "0.1.0"
+authors = ["fwxs"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+resolv-conf = "0.7.0"
+trust-dns-client = "0.20.2"
+plugins_core = { path = "../core" }
