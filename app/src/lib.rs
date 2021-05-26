@@ -1,10 +1,12 @@
 pub mod menu;
 
 use libloading::Library;
-use plugins_core::{InvocationError, Plugin, PluginDeclaration};
-use std::{alloc::System, collections::HashMap, env, ffi::OsStr, path::Path, rc::Rc};
+use plugins_core::{Help, InvocationError, Plugin, PluginDeclaration};
+use std::{
+    alloc::System, cell::RefCell, collections::HashMap, env, ffi::OsStr, path::Path, rc::Rc,
+};
 
-use crate::menu::handlers::{exec, set, list};
+use crate::menu::handlers::{exec, help, list, set};
 
 #[global_allocator]
 static ALLOCATOR: System = System;
@@ -25,32 +27,32 @@ pub fn run() -> Result<(), std::io::Error> {
                 } else {
                     eprintln!("Plugin {} not found", plugin);
                 }
-            },
+            }
             menu::parser::Command::Set(args) => {
                 if prefix.is_none() {
                     eprintln!("[!] No plugin selected.");
                     continue;
                 }
                 set::handle_set(args, &mut plugin_args);
-            },
-            menu::parser::Command::Exec => exec::handle_exec(&ext_plugins, prefix.clone().unwrap().as_str(), &plugin_args),
+            }
+            menu::parser::Command::Exec => {
+                exec::handle_exec(&ext_plugins, prefix.clone().unwrap().as_str(), &plugin_args)
+            }
             menu::parser::Command::Help(plugin) => {
                 if plugin.is_empty() {
                     // TODO: Program help
                     println!("Program help");
+                } else {
+                    help::show_plugin_help(&plugin, &ext_plugins)
+                        .unwrap_or_else(|err| eprintln!("{:?}", err));
                 }
-                else {
-                    ext_plugins.show_help(&plugin).unwrap_or_else(
-                    |err| eprintln!("{:?}", err)
-                    );
-                }
-            },
+            }
             menu::parser::Command::Unknown(cmd) => eprintln!("{}", cmd),
             menu::parser::Command::Nothing => continue,
         };
     }
 
-    return Ok(());
+    Ok(())
 }
 
 fn load_plugins() -> ExternalPlugins {
@@ -79,13 +81,13 @@ fn load_plugins() -> ExternalPlugins {
         });
     }
 
-    return plugins;
+    plugins
 }
 
 /// A map of all externally provided functions.
 #[derive(Default)]
 pub struct ExternalPlugins {
-    plugins: HashMap<String, PluginProxy>,
+    plugins: Rc<RefCell<HashMap<String, PluginProxy>>>,
     libraries: Vec<Rc<Library>>,
 }
 
@@ -100,26 +102,14 @@ impl ExternalPlugins {
         arguments: &std::collections::HashMap<String, String>,
     ) -> Result<(), InvocationError> {
         self.plugins
+            .borrow()
             .get(plugin)
             .ok_or_else(|| format!("\"{}\" not found", plugin))?
             .call(arguments.to_owned())
     }
 
-    fn show_help(&self, plugin: &str) -> Result<(), InvocationError> {
-        println!(
-            "{}",
-            self.plugins
-                .get(plugin)
-                .ok_or_else(|| format!("\"{}\" not found", plugin))?
-                .help()
-                .unwrap()
-        );
-
-        return Ok(());
-    }
-
     fn exists(&self, plugin: &str) -> bool {
-        return self.plugins.get(plugin).is_some();
+        return self.plugins.borrow().get(plugin).is_some();
     }
 
     /// Load a plugin library and add all contained functions to the internal
@@ -159,12 +149,12 @@ impl ExternalPlugins {
         (decl.register)(&mut registrar);
 
         // add all loaded plugins to the functions map
-        self.plugins.extend(registrar.plugins);
+        self.plugins.borrow_mut().extend(registrar.plugins);
 
         // and make sure ExternalFunctions keeps a reference to the library
         self.libraries.push(library);
 
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -200,12 +190,19 @@ pub struct PluginProxy {
 }
 
 impl Plugin for PluginProxy {
+    fn required_args(&self) -> Vec<&str> {
+        self.plugin.required_args()
+    }
 
     fn call(&self, args: std::collections::HashMap<String, String>) -> Result<(), InvocationError> {
         self.plugin.call(args)
     }
 
-    fn help(&self) -> Option<&str> {
+    fn help(&self) -> Help {
         self.plugin.help()
+    }
+
+    fn description(&self) -> &str {
+        self.plugin.description()
     }
 }

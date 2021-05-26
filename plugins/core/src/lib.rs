@@ -2,17 +2,30 @@ pub static CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub static RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
 
-pub trait Plugin {
-    fn required_args(&self) -> Vec<&str> {
-        return vec![""];
-    }
+#[derive(Default)]
+pub struct Arg<'a> {
+    pub name: &'a str,
+    pub desc: &'a str
+}
 
+#[derive(Default)]
+pub struct Help<'a> {
+    pub description: &'a str,
+    pub args: Vec<Arg<'a>>
+}
+
+pub trait Plugin {
+    /// Plugin required arguments.
+    fn required_args(&self) -> Vec<&str>;
+
+    /// Main plugin executor.
     fn call(&self, args: std::collections::HashMap<String, String>) -> Result<(), InvocationError>;
 
     /// Help text that may be used to display information about this function.
-    fn help(&self) -> Option<&str> {
-        None
-    }
+    fn help(&self) -> Help;
+
+    /// Plugin description.
+    fn description(&self) -> &str;
 }
 
 #[derive(Debug, Clone, PartialEq)]

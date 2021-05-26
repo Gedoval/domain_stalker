@@ -9,3 +9,5 @@ edition = "2018"
 [dependencies]
 libloading = "0.7.0"
 plugins_core = { path = "../plugins/core" }
+console = "0.14.1"
+cli-table = "0.4"
